@@ -306,6 +306,21 @@
         </button>
       </div>
     </div>
+
+    <!-- Favorite Activities Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-star"></i> Favorite Activities</h2>
+      </div>
+      <ul id="favoriteActivitiesList">
+        <li>No favorites yet</li>
+      </ul>
+      <div class="card-footer">
+        <button class="btn btn-primary btn-sm" id="addFavoriteBtn">
+          <i class="fas fa-plus"></i> Add Favorite
+        </button>
+      </div>
+    </div>
   </main>
 
   <!-- Blood Sugar Modal -->
@@ -354,156 +369,45 @@
     </div>
   </div>
 
+  <!-- Favorite Modal -->
+  <div class="modal" id="favoriteModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Favorite Activity</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="favoriteForm">
+        <div class="form-group">
+          <label for="favoriteActivity">Activity Name</label>
+          <input type="text" id="favoriteActivity" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
-    // DOM Elements
     const modals = {
       bloodSugar: document.getElementById('bloodSugarModal'),
-      meal: document.getElementById('mealModal')
+      meal: document.getElementById('mealModal'),
+      favorite: document.getElementById('favoriteModal')
     };
 
     const buttons = {
       logReadings: document.getElementById('logReadingsBtn'),
       newReading: document.getElementById('newReadingBtn'),
       addMeal: document.getElementById('addMealBtn'),
-      connectFit: document.getElementById('connectFitBtn')
+      connectFit: document.getElementById('connectFitBtn'),
+      addFavorite: document.getElementById('addFavoriteBtn')
     };
 
+    const favoriteList = document.getElementById('favoriteActivitiesList');
     const activityDataElement = document.getElementById('activityData');
 
-    // Google Fit API integration
-    const GOOGLE_FIT_CLIENT_ID = '668736236743-1u8jrlmfke4s2q0e2hbrfq24oih5jhuq.apps.googleusercontent.com';
-    const GOOGLE_FIT_SCOPES = 'https://www.googleapis.com/auth/fitness.activity.read';
-    
-    // Initialize Google API client - assuming user is already authenticated
-    function initClient() {
-      gapi.client.init({
-        clientId: GOOGLE_FIT_CLIENT_ID,
-        scope: GOOGLE_FIT_SCOPES
-      }).then(() => {
-        console.log('Google API client initialized');
-        // Automatically fetch data after initialization
-        fetchActivityData();
-      }).catch(err => {
-        console.error('Error initializing Google API client:', err);
-        activityDataElement.innerHTML = `
-          <li><strong>Error initializing Google Fit</strong></li>
-          <li>Please refresh the page</li>
-        `;
-      });
-    }
-
-    // Load Google API client
-    function loadGoogleFitAPI() {
-      gapi.load('client:auth2', {
-        callback: initClient,
-        onerror: function() {
-          console.error('Failed to load Google API client');
-          activityDataElement.innerHTML = `
-            <li><strong>Failed to load Google Fit</strong></li>
-            <li>Please check your connection</li>
-          `;
-        },
-        timeout: 5000, // 5 seconds timeout
-        ontimeout: function() {
-          console.error('Timeout loading Google API client');
-          activityDataElement.innerHTML = `
-            <li><strong>Connection timeout</strong></li>
-            <li>Please try again later</li>
-          `;
-        }
-      });
-    }
-
-    // Fetch activity data from Google Fit
-    async function fetchActivityData() {
-      try {
-        activityDataElement.innerHTML = '<li><strong>Loading activity data...</strong></li>';
-        
-        // Get today's date range
-        const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const endTime = now.toISOString();
-        const startTime = startOfDay.toISOString();
-
-        // Fetch steps data
-        const stepsResponse = await gapi.client.fitness.users.dataset.aggregate({
-          userId: 'me',
-          resource: {
-            aggregateBy: [{
-              dataTypeName: 'com.google.step_count.delta',
-              dataSourceId: 'derived:com.google.step_count.delta:com.google.android.gms:estimated_steps'
-            }],
-            bucketByTime: { durationMillis: 86400000 }, // 1 day
-            startTimeMillis: new Date(startTime).getTime(),
-            endTimeMillis: new Date(endTime).getTime()
-          }
-        });
-
-        // Fetch activity segments
-        const activityResponse = await gapi.client.fitness.users.sessions.list({
-          userId: 'me',
-          startTime: startTime,
-          endTime: endTime
-        });
-
-        // Process the data
-        const steps = stepsResponse.result.bucket?.[0]?.dataset?.[0]?.point?.[0]?.value?.[0]?.intVal || 0;
-        const activities = activityResponse.result.session || [];
-
-        // Update the UI
-        updateActivityUI(steps, activities);
-        
-      } catch (error) {
-        console.error('Error fetching Google Fit data:', error);
-        activityDataElement.innerHTML = `
-          <li><strong>Error loading activity data</strong></li>
-          <li>${error.message || 'Please try again'}</li>
-        `;
-      }
-    }
-
-    // Update the activity card UI with fetched data
-    function updateActivityUI(steps, activities) {
-      let html = '';
-      
-      // Add steps data
-      html += `<li><strong>Today's Steps:</strong> ${steps.toLocaleString()}</li>`;
-      
-      // Add activities if any
-      if (activities.length > 0) {
-        const activityMinutes = activities.reduce((total, session) => {
-          return total + (session.endTimeMillis - session.startTimeMillis) / 60000;
-        }, 0);
-        
-        html += `<li><strong>Activity Time:</strong> ${Math.round(activityMinutes)} minutes</li>`;
-        
-        // List activities
-        const activityTypes = activities.map(session => {
-          // Convert activity type numbers to human-readable names
-          const typeMap = {
-            1: 'Walking',
-            2: 'Running',
-            3: 'Biking',
-            8: 'Sleeping',
-            9: 'Treadmill',
-            72: 'Swimming',
-            // Add more mappings as needed
-          };
-          return typeMap[session.activityType] || `Activity ${session.activityType || 'unknown'}`;
-        }).filter((value, index, self) => self.indexOf(value) === index);
-        
-        html += `<li><strong>Activities:</strong> ${activityTypes.join(', ')}</li>`;
-      } else {
-        html += `<li><strong>No recorded activities today</strong></li>`;
-      }
-      
-      // Add weekly goal progress (example)
-      html += `<li><strong>Weekly Goal:</strong> 5/7 days active</li>`;
-      
-      activityDataElement.innerHTML = html;
-    }
-
-    // Modal functions
     function openModal(modal) {
       modal.style.display = 'flex';
     }
@@ -512,38 +416,25 @@
       modal.style.display = 'none';
     }
 
-    // Event listeners for modals
-    window.addEventListener('click', (e) => {
-      if (e.target.classList.contains('modal')) {
-        closeModal(e.target);
-      }
-    });
-
     document.querySelectorAll('.modal-close').forEach(btn => {
       btn.addEventListener('click', () => {
         closeModal(btn.closest('.modal'));
       });
     });
 
-    // Button event listeners
-    buttons.logReadings.addEventListener('click', () => {
-      openModal(modals.bloodSugar);
+    window.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal')) {
+        closeModal(e.target);
+      }
     });
 
-    buttons.newReading.addEventListener('click', () => {
-      openModal(modals.bloodSugar);
-    });
+    buttons.logReadings.addEventListener('click', () => openModal(modals.bloodSugar));
+    buttons.newReading.addEventListener('click', () => openModal(modals.bloodSugar));
+    buttons.addMeal.addEventListener('click', () => openModal(modals.meal));
+    buttons.addFavorite.addEventListener('click', () => openModal(modals.favorite));
+    buttons.connectFit.addEventListener('click', fetchActivityData);
 
-    buttons.addMeal.addEventListener('click', () => {
-      openModal(modals.meal);
-    });
-
-    buttons.connectFit.addEventListener('click', () => {
-      fetchActivityData();
-    });
-
-    // Form submissions
-    document.getElementById('bloodSugarForm').addEventListener('submit', (e) => {
+    document.getElementById('bloodSugarForm').addEventListener('submit', e => {
       e.preventDefault();
       const value = document.getElementById('bloodSugarValue').value;
       alert(`Blood sugar reading of ${value} mg/dL logged!`);
@@ -551,7 +442,7 @@
       e.target.reset();
     });
 
-    document.getElementById('mealForm').addEventListener('submit', (e) => {
+    document.getElementById('mealForm').addEventListener('submit', e => {
       e.preventDefault();
       const carbs = document.getElementById('carbsAmount').value;
       alert(`Meal with ${carbs}g carbs logged!`);
@@ -559,22 +450,32 @@
       e.target.reset();
     });
 
-    // Load Google Fit API when page loads
-    window.onload = function() {
-      // Load the Google API client library
-      const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js';
-      script.onload = function() {
-        loadGoogleFitAPI();
-      };
-      script.onerror = function() {
-        activityDataElement.innerHTML = `
-          <li><strong>Failed to load Google API</strong></li>
-          <li>Please check your connection</li>
-        `;
-      };
-      document.body.appendChild(script);
-    };
+    document.getElementById('favoriteForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const value = document.getElementById('favoriteActivity').value.trim();
+      if (value) {
+        const li = document.createElement('li');
+        li.textContent = value;
+        if (favoriteList.children[0] && favoriteList.children[0].textContent === 'No favorites yet') {
+          favoriteList.innerHTML = '';
+        }
+        favoriteList.appendChild(li);
+        this.reset();
+        closeModal(modals.favorite);
+      }
+    });
+
+    // Simulate Google Fit API for now
+    function fetchActivityData() {
+      activityDataElement.innerHTML = `
+        <li><strong>Today's Steps:</strong> 4,230</li>
+        <li><strong>Activity Time:</strong> 45 minutes</li>
+        <li><strong>Activities:</strong> Walking, Stretching</li>
+        <li><strong>Weekly Goal:</strong> 3/7 days active</li>
+      `;
+    }
+
+    window.onload = fetchActivityData;
   </script>
 </body>
 </html>
