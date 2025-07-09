@@ -92,6 +92,11 @@
       background-color: #0056b3;
     }
 
+    .btn-sm {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+    }
+
     .container {
       max-width: 1200px;
       margin: 2rem auto;
@@ -216,6 +221,75 @@
       font-family: inherit;
     }
 
+    .history-container {
+      margin-top: 2rem;
+      padding: 1rem;
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .history-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      padding: 0.8rem;
+      border-bottom: 1px solid #eee;
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .history-date {
+      font-weight: bold;
+      color: var(--primary);
+      min-width: 100px;
+    }
+
+    .history-value {
+      color: var(--text);
+    }
+
+    .history-type {
+      color: var(--text-light);
+      font-size: 0.8rem;
+    }
+
+    .tab-container {
+      display: flex;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .tab {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab.active {
+      border-bottom: 2px solid var(--primary);
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .medication-details {
+      flex-grow: 1;
+      margin-left: 1rem;
+    }
+
     @media (max-width: 768px) {
       .container {
         grid-template-columns: 1fr;
@@ -249,10 +323,10 @@
       <div class="card-header">
         <h2><i class="fas fa-tint"></i> Blood Sugar</h2>
       </div>
-      <ul>
-        <li><strong>Morning:</strong> 105 mg/dL</li>
-        <li><strong>After Lunch:</strong> 128 mg/dL</li>
-        <li><strong>Avg. Week:</strong> 112 mg/dL</li>
+      <ul id="bloodSugarData">
+        <li><strong>Morning:</strong> <span id="morningReading">--</span> mg/dL</li>
+        <li><strong>After Lunch:</strong> <span id="afternoonReading">--</span> mg/dL</li>
+        <li><strong>Avg. Week:</strong> <span id="avgReading">--</span> mg/dL</li>
       </ul>
       <div class="card-footer">
         <button class="btn btn-primary btn-sm" id="newReadingBtn">
@@ -267,11 +341,15 @@
       <div class="card-header">
         <h2><i class="fas fa-pills"></i> Medications</h2>
       </div>
-      <ul>
-        <li><strong>Metformin:</strong> 2x daily</li>
-        <li><strong>Insulin:</strong> 3x daily</li>
-        <li><strong>Last Taken:</strong> Today 8:05 AM</li>
+      <ul id="medicationData">
+        <li>No medications added yet</li>
       </ul>
+      <div class="card-footer">
+        <button class="btn btn-primary btn-sm" id="addMedicationBtn">
+          <i class="fas fa-plus"></i>
+          Add Medication
+        </button>
+      </div>
     </div>
 
     <!-- Food Card -->
@@ -279,8 +357,8 @@
       <div class="card-header">
         <h2><i class="fas fa-utensils"></i> Food</h2>
       </div>
-      <ul>
-        <li><strong>Today's Carbs:</strong> 150g</li>
+      <ul id="foodData">
+        <li><strong>Today's Carbs:</strong> <span id="todayCarbs">0</span>g</li>
         <li><strong>Target:</strong> 180g</li>
       </ul>
       <div class="card-footer">
@@ -300,24 +378,9 @@
         <li><strong>Loading activity data...</strong></li>
       </ul>
       <div class="card-footer">
-        <button class="btn btn-primary btn-sm" id="connectFitBtn">
-          <i class="fas fa-sync-alt"></i>
-          Refresh Data
-        </button>
-      </div>
-    </div>
-
-    <!-- Favorite Activities Card -->
-    <div class="card">
-      <div class="card-header">
-        <h2><i class="fas fa-star"></i> Favorite Activities</h2>
-      </div>
-      <ul id="favoriteActivitiesList">
-        <li>No favorites yet</li>
-      </ul>
-      <div class="card-footer">
-        <button class="btn btn-primary btn-sm" id="addFavoriteBtn">
-          <i class="fas fa-plus"></i> Add Favorite
+        <button class="btn btn-primary btn-sm" id="addActivityBtn">
+          <i class="fas fa-plus"></i>
+          Add Activity
         </button>
       </div>
     </div>
@@ -336,8 +399,47 @@
           <input type="number" id="bloodSugarValue" class="form-control" required>
         </div>
         <div class="form-group">
-          <label for="readingTime">Time</label>
-          <input type="time" id="readingTime" class="form-control" required>
+          <label for="readingTime">Time of Day</label>
+          <select id="readingTime" class="form-control" required>
+            <option value="">Select time</option>
+            <option value="morning">Morning (Fasting)</option>
+            <option value="afternoon">After Lunch</option>
+            <option value="evening">Evening</option>
+            <option value="night">Night (Before Bed)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="readingDate">Date</label>
+          <input type="date" id="readingDate" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Medication Modal -->
+  <div class="modal" id="medicationModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Medication</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="medicationForm">
+        <div class="form-group">
+          <label for="medicationName">Medication Name</label>
+          <input type="text" id="medicationName" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="medicationDosage">Dosage</label>
+          <input type="text" id="medicationDosage" class="form-control" required placeholder="e.g. 500mg">
+        </div>
+        <div class="form-group">
+          <label for="medicationFrequency">Frequency</label>
+          <input type="text" id="medicationFrequency" class="form-control" required placeholder="e.g. 2x daily">
         </div>
         <div class="form-group">
           <button type="submit" class="btn btn-primary">
@@ -361,6 +463,14 @@
           <input type="number" id="carbsAmount" class="form-control" required>
         </div>
         <div class="form-group">
+          <label for="mealDescription">Meal Description</label>
+          <input type="text" id="mealDescription" class="form-control" placeholder="Optional">
+        </div>
+        <div class="form-group">
+          <label for="mealDate">Date</label>
+          <input type="date" id="mealDate" class="form-control" required>
+        </div>
+        <div class="form-group">
           <button type="submit" class="btn btn-primary">
             <i class="fas fa-save"></i> Save
           </button>
@@ -369,17 +479,33 @@
     </div>
   </div>
 
-  <!-- Favorite Modal -->
-  <div class="modal" id="favoriteModal">
+  <!-- Activity Modal -->
+  <div class="modal" id="activityModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Add Favorite Activity</h3>
+        <h3>Log Activity</h3>
         <button class="modal-close">&times;</button>
       </div>
-      <form id="favoriteForm">
+      <form id="activityForm">
         <div class="form-group">
-          <label for="favoriteActivity">Activity Name</label>
-          <input type="text" id="favoriteActivity" class="form-control" required>
+          <label for="activityType">Activity Type</label>
+          <input type="text" id="activityType" class="form-control" required placeholder="e.g. Walking, Running">
+        </div>
+        <div class="form-group">
+          <label for="activityDuration">Duration (minutes)</label>
+          <input type="number" id="activityDuration" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="activityIntensity">Intensity</label>
+          <select id="activityIntensity" class="form-control" required>
+            <option value="low">Low</option>
+            <option value="moderate">Moderate</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="activityDate">Date</label>
+          <input type="date" id="activityDate" class="form-control" required>
         </div>
         <div class="form-group">
           <button type="submit" class="btn btn-primary">
@@ -387,35 +513,258 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal" id="historyModal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 id="historyTitle">Medication History</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="tab-container" id="historyTabs">
+        <div class="tab" data-type="bloodSugar">Blood Sugar</div>
+        <div class="tab active" data-type="medication">Medications</div>
+        <div class="tab" data-type="food">Food</div>
+        <div class="tab" data-type="activity">Activity</div>
+      </div>
+      <div class="history-container">
+        <div class="history-list" id="historyList">
+          <!-- History items will be inserted here -->
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
+    // DOM Elements
     const modals = {
       bloodSugar: document.getElementById('bloodSugarModal'),
+      medication: document.getElementById('medicationModal'),
       meal: document.getElementById('mealModal'),
-      favorite: document.getElementById('favoriteModal')
+      activity: document.getElementById('activityModal'),
+      history: document.getElementById('historyModal')
     };
 
     const buttons = {
       logReadings: document.getElementById('logReadingsBtn'),
       newReading: document.getElementById('newReadingBtn'),
+      addMedication: document.getElementById('addMedicationBtn'),
       addMeal: document.getElementById('addMealBtn'),
-      connectFit: document.getElementById('connectFitBtn'),
-      addFavorite: document.getElementById('addFavoriteBtn')
+      addActivity: document.getElementById('addActivityBtn')
     };
 
-    const favoriteList = document.getElementById('favoriteActivitiesList');
-    const activityDataElement = document.getElementById('activityData');
+    // Data elements
+    const bloodSugarData = {
+      morning: document.getElementById('morningReading'),
+      afternoon: document.getElementById('afternoonReading'),
+      avg: document.getElementById('avgReading')
+    };
+
+    const foodData = {
+      todayCarbs: document.getElementById('todayCarbs')
+    };
+
+    // Initialize data from localStorage
+    let appData = {
+      bloodSugar: JSON.parse(localStorage.getItem('bloodSugar')) || [],
+      medications: JSON.parse(localStorage.getItem('medications')) || [],
+      food: JSON.parse(localStorage.getItem('food')) || [],
+      activity: JSON.parse(localStorage.getItem('activity')) || []
+    };
+
+    // Helper functions
+    function saveData() {
+      localStorage.setItem('bloodSugar', JSON.stringify(appData.bloodSugar));
+      localStorage.setItem('medications', JSON.stringify(appData.medications));
+      localStorage.setItem('food', JSON.stringify(appData.food));
+      localStorage.setItem('activity', JSON.stringify(appData.activity));
+    }
+
+    function getToday() {
+      const today = new Date();
+      return today.toISOString().split('T')[0];
+    }
+
+    function formatDate(dateStr) {
+      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      return new Date(dateStr).toLocaleDateString(undefined, options);
+    }
 
     function openModal(modal) {
       modal.style.display = 'flex';
+      // Set today's date as default for date fields
+      const dateInputs = modal.querySelectorAll('input[type="date"]');
+      dateInputs.forEach(input => {
+        if (!input.value) input.value = getToday();
+      });
     }
 
     function closeModal(modal) {
       modal.style.display = 'none';
     }
 
+    function calculateWeeklyAverage(readings) {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      
+      const recentReadings = readings.filter(reading => {
+        return new Date(reading.date) >= oneWeekAgo;
+      });
+      
+      if (recentReadings.length === 0) return 0;
+      
+      const sum = recentReadings.reduce((total, reading) => total + parseInt(reading.value), 0);
+      return Math.round(sum / recentReadings.length);
+    }
+
+    function updateBloodSugarDisplay() {
+      const today = getToday();
+      const todayReadings = appData.bloodSugar.filter(reading => reading.date === today);
+      
+      // Reset display
+      bloodSugarData.morning.textContent = '--';
+      bloodSugarData.afternoon.textContent = '--';
+      
+      // Update with today's readings
+      todayReadings.forEach(reading => {
+        if (reading.time === 'morning') {
+          bloodSugarData.morning.textContent = reading.value;
+        } else if (reading.time === 'afternoon') {
+          bloodSugarData.afternoon.textContent = reading.value;
+        }
+      });
+      
+      // Update weekly average
+      bloodSugarData.avg.textContent = calculateWeeklyAverage(appData.bloodSugar);
+    }
+
+function updateMedicationDisplay() {
+  const medicationList = document.getElementById('medicationData');
+  medicationList.innerHTML = '';
+  if (appData.medications.length === 0) {
+    medicationList.innerHTML = '<li>No medications added yet</li>';
+    return;
+  }
+  // Show only the last added medication (summary)
+  const lastMed = appData.medications[appData.medications.length - 1];
+  const medItem = document.createElement('li');
+  medItem.innerHTML = `<strong>${lastMed.name}:</strong> ${lastMed.dosage} (${lastMed.frequency})`;
+  medicationList.appendChild(medItem);
+}
+
+    function updateFoodDisplay() {
+      const today = getToday();
+      const todayMeals = appData.food.filter(meal => meal.date === today);
+      const totalCarbs = todayMeals.reduce((sum, meal) => sum + parseInt(meal.carbs), 0);
+      
+      foodData.todayCarbs.textContent = totalCarbs;
+    }
+
+    function updateActivityDisplay() {
+      const today = getToday();
+      const todayActivities = appData.activity.filter(act => act.date === today);
+      const activityList = document.getElementById('activityData');
+      
+      if (todayActivities.length === 0) {
+        activityList.innerHTML = '<li>No activities logged today</li>';
+        return;
+      }
+      
+      const totalMinutes = todayActivities.reduce((sum, act) => sum + parseInt(act.duration), 0);
+      const activities = todayActivities.map(act => act.type).join(', ');
+      
+      activityList.innerHTML = `
+        <li><strong>Today's Activity:</strong> ${totalMinutes} minutes</li>
+        <li><strong>Activities:</strong> ${activities}</li>
+        <li><strong>Avg. Intensity:</strong> ${todayActivities[0].intensity}</li>
+      `;
+    }
+
+    function showHistory(type) {
+      const historyTitle = document.getElementById('historyTitle');
+      const historyList = document.getElementById('historyList');
+      // Update active tab
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.dataset.type === type) {
+          tab.classList.add('active');
+        }
+      });
+      // Set title
+      historyTitle.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} History`;
+      // Get data for the selected type
+      const data = appData[type];
+      if (data.length === 0) {
+        historyList.innerHTML = '<div class="history-item">No history available</div>';
+        return;
+      }
+      historyList.innerHTML = '';
+      if (type === 'medication') {
+        // Show all medications, newest first, including those with the same date
+        const sortedMeds = [...appData.medications].map((med, idx) => ({...med, _idx: idx})).sort((a, b) => {
+          // Compare by date, but if same date, compare by insertion order (latest last)
+          const dateDiff = new Date(b.date) - new Date(a.date);
+          if (dateDiff !== 0) return dateDiff;
+          // If date is the same, show the most recently added first
+          return b._idx - a._idx;
+        });
+        sortedMeds.forEach((med) => {
+          const historyItem = document.createElement('div');
+          historyItem.className = 'history-item';
+          historyItem.innerHTML = `
+            <span class="history-date">${formatDate(med.date)}</span>
+            <div class="medication-details">
+              <div><strong>${med.name}</strong></div>
+              <div class="history-type">${med.dosage} - ${med.frequency}</div>
+            </div>
+          `;
+          historyList.appendChild(historyItem);
+        });
+        return;
+      }
+      // For other types, keep the existing grouping by date
+      const groupedByDate = {};
+      data.forEach(item => {
+        const date = item.date || getToday();
+        if (!groupedByDate[date]) {
+          groupedByDate[date] = [];
+        }
+        groupedByDate[date].push(item);
+      });
+      const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+      sortedDates.forEach(date => {
+        const dateHeader = document.createElement('div');
+        dateHeader.className = 'history-item';
+        dateHeader.innerHTML = `<span class="history-date">${formatDate(date)}</span>`;
+        historyList.appendChild(dateHeader);
+        groupedByDate[date].forEach(item => {
+          const historyItem = document.createElement('div');
+          historyItem.className = 'history-item';
+          let content = '';
+          if (type === 'bloodSugar') {
+            content = `
+              <span class="history-type">${item.time}</span>
+              <span class="history-value">${item.value} mg/dL</span>
+            `;
+          } else if (type === 'food') {
+            content = `
+              <span>${item.carbs}g carbs</span>
+              ${item.description ? `<small>${item.description}</small>` : ''}
+            `;
+          } else if (type === 'activity') {
+            content = `
+              <span>${item.type} - ${item.duration} min (${item.intensity})</span>
+            `;
+          }
+          historyItem.innerHTML = content;
+          historyList.appendChild(historyItem);
+        });
+      });
+    }
+
+    // Event Listeners
     document.querySelectorAll('.modal-close').forEach(btn => {
       btn.addEventListener('click', () => {
         closeModal(btn.closest('.modal'));
@@ -428,54 +777,125 @@
       }
     });
 
-    buttons.logReadings.addEventListener('click', () => openModal(modals.bloodSugar));
+    // Button click handlers
+    buttons.logReadings.addEventListener('click', () => {
+      openModal(modals.history);
+      // Set medication tab as active and show all medications
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.dataset.type === 'medication') {
+          tab.classList.add('active');
+        }
+      });
+      showHistory('medication');
+    });
+    
     buttons.newReading.addEventListener('click', () => openModal(modals.bloodSugar));
+    buttons.addMedication.addEventListener('click', () => openModal(modals.medication));
     buttons.addMeal.addEventListener('click', () => openModal(modals.meal));
-    buttons.addFavorite.addEventListener('click', () => openModal(modals.favorite));
-    buttons.connectFit.addEventListener('click', fetchActivityData);
+    buttons.addActivity.addEventListener('click', () => openModal(modals.activity));
 
+    // Tab click handlers
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        showHistory(tab.dataset.type);
+      });
+    });
+
+    // Form submission handlers
     document.getElementById('bloodSugarForm').addEventListener('submit', e => {
       e.preventDefault();
-      const value = document.getElementById('bloodSugarValue').value;
-      alert(`Blood sugar reading of ${value} mg/dL logged!`);
+      
+      const newReading = {
+        value: document.getElementById('bloodSugarValue').value,
+        time: document.getElementById('readingTime').value,
+        date: document.getElementById('readingDate').value || getToday()
+      };
+      
+      appData.bloodSugar.push(newReading);
+      saveData();
+      updateBloodSugarDisplay();
       closeModal(modals.bloodSugar);
+      e.target.reset();
+    });
+
+    document.getElementById('medicationForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('medicationName').value.trim();
+      const dosage = document.getElementById('medicationDosage').value.trim();
+      const frequency = document.getElementById('medicationFrequency').value.trim();
+      let date = getToday();
+      
+      if (!name || !dosage || !frequency) return;
+      
+      const newMedication = {
+        name: name,
+        dosage: dosage,
+        frequency: frequency,
+        date: date
+      };
+      
+      appData.medications.push(newMedication);
+      saveData();
+      updateMedicationDisplay();
+      
+      // Update the history modal if it's open
+      if (modals.history.style.display === 'flex') {
+        showHistory('medication');
+      }
+      
+      closeModal(modals.medication);
       e.target.reset();
     });
 
     document.getElementById('mealForm').addEventListener('submit', e => {
       e.preventDefault();
-      const carbs = document.getElementById('carbsAmount').value;
-      alert(`Meal with ${carbs}g carbs logged!`);
+      
+      const newMeal = {
+        carbs: document.getElementById('carbsAmount').value,
+        description: document.getElementById('mealDescription').value,
+        date: document.getElementById('mealDate').value || getToday()
+      };
+      
+      appData.food.push(newMeal);
+      saveData();
+      updateFoodDisplay();
       closeModal(modals.meal);
       e.target.reset();
     });
 
-    document.getElementById('favoriteForm').addEventListener('submit', function (e) {
+    document.getElementById('activityForm').addEventListener('submit', e => {
       e.preventDefault();
-      const value = document.getElementById('favoriteActivity').value.trim();
-      if (value) {
-        const li = document.createElement('li');
-        li.textContent = value;
-        if (favoriteList.children[0] && favoriteList.children[0].textContent === 'No favorites yet') {
-          favoriteList.innerHTML = '';
-        }
-        favoriteList.appendChild(li);
-        this.reset();
-        closeModal(modals.favorite);
-      }
+      
+      const newActivity = {
+        type: document.getElementById('activityType').value,
+        duration: document.getElementById('activityDuration').value,
+        intensity: document.getElementById('activityIntensity').value,
+        date: document.getElementById('activityDate').value || getToday()
+      };
+      
+      appData.activity.push(newActivity);
+      saveData();
+      updateActivityDisplay();
+      closeModal(modals.activity);
+      e.target.reset();
     });
 
-    // Simulate Google Fit API for now
-    function fetchActivityData() {
-      activityDataElement.innerHTML = `
-        <li><strong>Today's Steps:</strong> 4,230</li>
-        <li><strong>Activity Time:</strong> 45 minutes</li>
-        <li><strong>Activities:</strong> Walking, Stretching</li>
-        <li><strong>Weekly Goal:</strong> 3/7 days active</li>
-      `;
+    // Initialize the app
+    function initApp() {
+      updateBloodSugarDisplay();
+      updateMedicationDisplay();
+      updateFoodDisplay();
+      updateActivityDisplay();
+      
+      // Set today's date as default in all date fields
+      document.querySelectorAll('input[type="date"]').forEach(input => {
+        if (!input.value) input.value = getToday();
+      });
     }
 
-    window.onload = fetchActivityData;
+    // Start the app
+    window.onload = initApp;
   </script>
 </body>
 </html>
