@@ -16,6 +16,8 @@
       --bg: #f4f6f8;
       --card-bg: #fff;
       --shadow: 0 4px 10px rgba(0,0,0,0.05);
+      --toast-bg: #323232;
+      --toast-color: #fff;
     }
 
     * {
@@ -81,15 +83,28 @@
       border: none;
       font-family: inherit;
       font-size: 0.95rem;
+      outline: none;
     }
-
+    .btn:focus {
+      box-shadow: 0 0 0 2px var(--primary-light);
+    }
     .btn-primary {
       background-color: var(--primary);
       color: white;
     }
-
-    .btn-primary:hover {
-      background-color: #0056b3;
+    .btn-primary:disabled {
+      background-color: #b3d1f7;
+      cursor: not-allowed;
+    }
+    .btn-cancel {
+      background-color: #eee;
+      color: var(--text-light);
+      margin-left: 0.5rem;
+      border: 1px solid #ddd;
+    }
+    .btn-cancel:hover {
+      background-color: #f8d7da;
+      color: var(--danger);
     }
 
     .btn-sm {
@@ -221,6 +236,7 @@
       font-family: inherit;
     }
 
+
     .history-container {
       margin-top: 2rem;
       padding: 1rem;
@@ -288,6 +304,37 @@
     .medication-details {
       flex-grow: 1;
       margin-left: 1rem;
+
+    .form-group .error {
+      color: var(--danger);
+      font-size: 0.85rem;
+      margin-top: 0.2rem;
+      display: none;
+    }
+    .form-group.invalid .error {
+      display: block;
+    }
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--toast-bg);
+      color: var(--toast-color);
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      font-size: 1rem;
+    }
+    .toast.show {
+      opacity: 1;
+      pointer-events: auto;
+
     }
 
     @media (max-width: 768px) {
@@ -318,7 +365,6 @@
   </section>
 
   <main class="container">
-    <!-- Blood Sugar Card -->
     <div class="card">
       <div class="card-header">
         <h2><i class="fas fa-tint"></i> Blood Sugar</h2>
@@ -336,7 +382,6 @@
       </div>
     </div>
 
-    <!-- Medication Card -->
     <div class="card">
       <div class="card-header">
         <h2><i class="fas fa-pills"></i> Medications</h2>
@@ -352,7 +397,6 @@
       </div>
     </div>
 
-    <!-- Food Card -->
     <div class="card">
       <div class="card-header">
         <h2><i class="fas fa-utensils"></i> Food</h2>
@@ -369,7 +413,6 @@
       </div>
     </div>
 
-    <!-- Activity Card -->
     <div class="card">
       <div class="card-header">
         <h2><i class="fas fa-running"></i> Activity</h2>
@@ -378,27 +421,50 @@
         <li><strong>Loading activity data...</strong></li>
       </ul>
       <div class="card-footer">
+
         <button class="btn btn-primary btn-sm" id="addActivityBtn">
           <i class="fas fa-plus"></i>
           Add Activity
+
+        <button class="btn btn-primary btn-sm" id="connectFitBtn">
+          <i class="fas fa-sync-alt"></i>
+          Refresh Data
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-star"></i> Favorite Activities</h2>
+      </div>
+      <ul id="favoriteActivitiesList">
+        <li>No favorites yet</li>
+      </ul>
+      <div class="card-footer">
+        <button class="btn btn-primary btn-sm" id="addFavoriteBtn">
+          <i class="fas fa-plus"></i> Add Favorite
+
         </button>
       </div>
     </div>
   </main>
 
-  <!-- Blood Sugar Modal -->
-  <div class="modal" id="bloodSugarModal">
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <div class="modal" id="bloodSugarModal" tabindex="-1" aria-modal="true" aria-labelledby="bloodSugarLabel">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Log Blood Sugar</h3>
-        <button class="modal-close">&times;</button>
+        <h3 id="bloodSugarLabel">Log Blood Sugar</h3>
+        <button class="modal-close" title="Close (Esc)">&times;</button>
       </div>
-      <form id="bloodSugarForm">
+      <form id="bloodSugarForm" autocomplete="off">
         <div class="form-group">
           <label for="bloodSugarValue">Blood Sugar (mg/dL)</label>
-          <input type="number" id="bloodSugarValue" class="form-control" required>
+          <input type="number" id="bloodSugarValue" class="form-control" placeholder="eg: 50" step="10" required aria-describedby="bloodSugarHelp">
+          <div class="error" id="bloodSugarError">Please enter a valid value (30-600).</div>
         </div>
         <div class="form-group">
+
           <label for="readingTime">Time of Day</label>
           <select id="readingTime" class="form-control" required>
             <option value="">Select time</option>
@@ -440,28 +506,44 @@
         <div class="form-group">
           <label for="medicationFrequency">Frequency</label>
           <input type="text" id="medicationFrequency" class="form-control" required placeholder="e.g. 2x daily">
+
+          <label for="readingTime">Time</label>
+            <input type="time" id="readingTime" class="form-control" required>
+
         </div>
         <div class="form-group">
+          <label for="readingType">Reading Taken while:</label>
+            <select id="readingType" class="form-control" required>
+              <option value="" disabled selected>Select reading type</option>
+              <option value="fasting">Fasting</option>
+              <option value="afterEating">After Meal</option>
+              <option value="after2Hours">2-3 Hours After Meal</option>
+            </select>
+          <div class="error" id="readingTypeError">Please select a reading type.</div>
+        </div>
+        <div class="form-group" style="display:flex;justify-content:flex-end;gap:0.5rem;">
           <button type="submit" class="btn btn-primary">
             <i class="fas fa-save"></i> Save
           </button>
+          <button type="button" class="btn btn-cancel" id="cancelBloodSugar">Cancel</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Meal Modal -->
-  <div class="modal" id="mealModal">
+  <div class="modal" id="mealModal" tabindex="-1" aria-modal="true" aria-labelledby="mealLabel">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Log Meal</h3>
-        <button class="modal-close">&times;</button>
+        <h3 id="mealLabel">Log Meal</h3>
+        <button class="modal-close" title="Close (Esc)">&times;</button>
       </div>
-      <form id="mealForm">
+      <form id="mealForm" autocomplete="off">
         <div class="form-group">
           <label for="carbsAmount">Carbohydrates (grams)</label>
-          <input type="number" id="carbsAmount" class="form-control" required>
+          <input type="number" id="carbsAmount" class="form-control" placeholder="eg: 100" step="1" min="0" max="1000" required aria-describedby="carbsHelp">
+          <div class="error" id="carbsError">Please enter a value between 0 and 1000.</div>
         </div>
+
         <div class="form-group">
           <label for="mealDescription">Meal Description</label>
           <input type="text" id="mealDescription" class="form-control" placeholder="Optional">
@@ -471,13 +553,18 @@
           <input type="date" id="mealDate" class="form-control" required>
         </div>
         <div class="form-group">
+
+        <div class="form-group" style="display:flex;justify-content:flex-end;gap:0.5rem;">
+
           <button type="submit" class="btn btn-primary">
             <i class="fas fa-save"></i> Save
           </button>
+          <button type="button" class="btn btn-cancel" id="cancelMeal">Cancel</button>
         </div>
       </form>
     </div>
   </div>
+
 
   <!-- Activity Modal -->
   <div class="modal" id="activityModal">
@@ -506,15 +593,30 @@
         <div class="form-group">
           <label for="activityDate">Date</label>
           <input type="date" id="activityDate" class="form-control" required>
-        </div>
+
+  <div class="modal" id="favoriteModal" tabindex="-1" aria-modal="true" aria-labelledby="favoriteLabel">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="favoriteLabel">Add Favorite Activity</h3>
+        <button class="modal-close" title="Close (Esc)">&times;</button>
+      </div>
+      <form id="favoriteForm" autocomplete="off">
         <div class="form-group">
+          <label for="favoriteActivity">Activity Name</label>
+          <input type="text" id="favoriteActivity" class="form-control" required aria-describedby="favoriteHelp">
+          <div class="error" id="favoriteError">Please enter an activity name.</div>
+
+        </div>
+        <div class="form-group" style="display:flex;justify-content:flex-end;gap:0.5rem;">
           <button type="submit" class="btn btn-primary">
             <i class="fas fa-save"></i> Save
           </button>
+          <button type="button" class="btn btn-cancel" id="cancelFavorite">Cancel</button>
         </div>
       </form>
     </div>
   </div>
+
 
   <!-- History Modal -->
   <div class="modal" id="historyModal">
@@ -537,6 +639,23 @@
     </div>
   </div>
 
+  <footer style="background-color: #f8f9fa; padding: 1rem; text-align: center; margin-top: 2rem; font-size: 0.9rem;">
+    <p><strong>Need Help?</strong> Contact any of the following hotlines or visit resources for more information.</p>
+
+    <ul style="list-style: none; padding: 0; margin: 0.5rem 0;">
+      <li><strong>DOH Healthline (PH):</strong> 1555 (Toll-free)</li>
+      <li><strong>National Diabetes Hotline (US):</strong> 1-800-DIABETES (1-800-342-2383)</li>
+    </ul>
+
+    <p>
+      Useful Links:
+      <a href="https://www.cdc.gov/diabetes/" target="_blank">CDC Diabetes Info</a> |
+      <a href="https://www.who.int/news-room/fact-sheets/detail/diabetes" target="_blank">WHO Diabetes Facts</a> |
+      <a href="https://www.idf.org/" target="_blank">International Diabetes Federation</a>
+    </p>
+  </footer>
+
+
   <script>
     // DOM Elements
     const modals = {
@@ -554,6 +673,7 @@
       addMeal: document.getElementById('addMealBtn'),
       addActivity: document.getElementById('addActivityBtn')
     };
+
 
     // Data elements
     const bloodSugarData = {
@@ -590,20 +710,38 @@
     function formatDate(dateStr) {
       const options = { year: 'numeric', month: 'short', day: 'numeric' };
       return new Date(dateStr).toLocaleDateString(undefined, options);
+
+    const favoriteList = document.getElementById('favoriteActivitiesList');
+    const activityDataElement = document.getElementById('activityData');
+    
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+
     }
 
     function openModal(modal) {
       modal.style.display = 'flex';
+
       // Set today's date as default for date fields
       const dateInputs = modal.querySelectorAll('input[type="date"]');
       dateInputs.forEach(input => {
         if (!input.value) input.value = getToday();
       });
-    }
 
+      modal.setAttribute('aria-hidden', 'false');
+  
+      const firstInput = modal.querySelector('input,select,button');
+      if (firstInput) firstInput.focus();
+
+    }
     function closeModal(modal) {
       modal.style.display = 'none';
+      modal.setAttribute('aria-hidden', 'true');
     }
+
 
     function calculateWeeklyAverage(readings) {
       const oneWeekAgo = new Date();
@@ -764,18 +902,25 @@ function updateMedicationDisplay() {
       });
     }
 
-    // Event Listeners
+
     document.querySelectorAll('.modal-close').forEach(btn => {
       btn.addEventListener('click', () => {
         closeModal(btn.closest('.modal'));
       });
     });
 
-    window.addEventListener('click', (e) => {
-      if (e.target.classList.contains('modal')) {
-        closeModal(e.target);
+    document.getElementById('cancelBloodSugar').onclick = () => closeModal(document.getElementById('bloodSugarModal'));
+    document.getElementById('cancelMeal').onclick = () => closeModal(document.getElementById('mealModal'));
+    document.getElementById('cancelFavorite').onclick = () => closeModal(document.getElementById('favoriteModal'));
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal').forEach(m => {
+          if (m.style.display === 'flex') closeModal(m);
+        });
       }
     });
+
 
     // Button click handlers
     buttons.logReadings.addEventListener('click', () => {
@@ -790,10 +935,31 @@ function updateMedicationDisplay() {
       showHistory('medication');
     });
     
+
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+          const focusable = modal.querySelectorAll('input,select,button');
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
+      });
+    });
+
+    buttons.logReadings.addEventListener('click', () => openModal(modals.bloodSugar));
+
     buttons.newReading.addEventListener('click', () => openModal(modals.bloodSugar));
     buttons.addMedication.addEventListener('click', () => openModal(modals.medication));
     buttons.addMeal.addEventListener('click', () => openModal(modals.meal));
     buttons.addActivity.addEventListener('click', () => openModal(modals.activity));
+
 
     // Tab click handlers
     document.querySelectorAll('.tab').forEach(tab => {
@@ -815,6 +981,106 @@ function updateMedicationDisplay() {
       appData.bloodSugar.push(newReading);
       saveData();
       updateBloodSugarDisplay();
+
+    const bloodSugarValue = document.getElementById('bloodSugarValue');
+    const bloodSugarError = document.getElementById('bloodSugarError');
+    const readingType = document.getElementById('readingType');
+    const readingTypeError = document.getElementById('readingTypeError');
+    bloodSugarValue.addEventListener('input', function() {
+      if (this.value < 30 || this.value > 600) {
+        bloodSugarError.style.display = 'block';
+        this.closest('.form-group').classList.add('invalid');
+      } else {
+        bloodSugarError.style.display = 'none';
+        this.closest('.form-group').classList.remove('invalid');
+      }
+    });
+    readingType.addEventListener('change', function() {
+      if (!this.value) {
+        readingTypeError.style.display = 'block';
+        this.closest('.form-group').classList.add('invalid');
+      } else {
+        readingTypeError.style.display = 'none';
+        this.closest('.form-group').classList.remove('invalid');
+      }
+    });
+
+    const carbsAmount = document.getElementById('carbsAmount');
+    const carbsError = document.getElementById('carbsError');
+    carbsAmount.addEventListener('input', function() {
+      if (this.value < 0 || this.value > 1000) {
+        carbsError.style.display = 'block';
+        this.closest('.form-group').classList.add('invalid');
+      } else {
+        carbsError.style.display = 'none';
+        this.closest('.form-group').classList.remove('invalid');
+      }
+    });
+
+    const favoriteActivity = document.getElementById('favoriteActivity');
+    const favoriteError = document.getElementById('favoriteError');
+    favoriteActivity.addEventListener('input', function() {
+      if (!this.value.trim()) {
+        favoriteError.style.display = 'block';
+        this.closest('.form-group').classList.add('invalid');
+      } else {
+        favoriteError.style.display = 'none';
+        this.closest('.form-group').classList.remove('invalid');
+      }
+    });
+
+    document.getElementById('bloodSugarForm').addEventListener('submit', e => {
+      e.preventDefault();
+
+      const value = parseInt(document.getElementById('bloodSugarValue').value);
+      const type = document.getElementById('readingType').value;
+      if (isNaN(value) || value < 30 || value > 600) {
+        bloodSugarError.style.display = 'block';
+        bloodSugarValue.closest('.form-group').classList.add('invalid');
+        return;
+      }
+      if (!type) {
+        readingTypeError.style.display = 'block';
+        readingType.closest('.form-group').classList.add('invalid');
+        return;
+      }
+      let message = "";
+      if (type === "fasting") {
+        if (value >= 80 && value <= 100) {
+          message = "Normal fasting blood sugar.";
+        } else if (value >= 101 && value <= 125) {
+          message = "Impaired fasting glucose (pre-diabetes).";
+        } else if (value >= 126) {
+          message = "Diabetic range for fasting glucose.";
+        } else {
+          message = "Low blood sugar. Consult a healthcare provider.";
+        }
+      }
+      else if (type === "afterEating") {
+        if (value >= 170 && value <= 200) {
+          message = "Normal blood sugar after eating.";
+        } else if (value >= 190 && value <= 230) {
+          message = "Impaired glucose tolerance (pre-diabetes).";
+        } else if (value >= 220) {
+          message = "Diabetic range after eating.";
+        } else {
+          message = "Below normal. Monitor for hypoglycemia.";
+        }
+      }
+      else if (type === "after2Hours") {
+        if (value >= 120 && value <= 140) {
+          message = "Normal blood sugar 2–3 hours after eating.";
+        } else if (value >= 140 && value <= 160) {
+          message = "Impaired glucose tolerance (pre-diabetes).";
+        } else if (value > 200) {
+          message = "Diabetic range after 2–3 hours.";
+        } else {
+          message = "Below normal or borderline. Consult a healthcare provider if unsure.";
+        }
+      }
+      showToast(message);
+      showToast(`Blood sugar reading of ${value} mg/dL logged!`);
+
       closeModal(modals.bloodSugar);
       e.target.reset();
     });
@@ -850,6 +1116,7 @@ function updateMedicationDisplay() {
 
     document.getElementById('mealForm').addEventListener('submit', e => {
       e.preventDefault();
+
       
       const newMeal = {
         carbs: document.getElementById('carbsAmount').value,
@@ -860,12 +1127,22 @@ function updateMedicationDisplay() {
       appData.food.push(newMeal);
       saveData();
       updateFoodDisplay();
+
+      const carbs = document.getElementById('carbsAmount').value;
+      if (carbs < 0 || carbs > 1000) {
+        carbsError.style.display = 'block';
+        carbsAmount.closest('.form-group').classList.add('invalid');
+        return;
+      }
+      showToast(`Meal with ${carbs}g carbs logged!`);
+
       closeModal(modals.meal);
       e.target.reset();
     });
 
     document.getElementById('activityForm').addEventListener('submit', e => {
       e.preventDefault();
+
       
       const newActivity = {
         type: document.getElementById('activityType').value,
@@ -892,10 +1169,58 @@ function updateMedicationDisplay() {
       document.querySelectorAll('input[type="date"]').forEach(input => {
         if (!input.value) input.value = getToday();
       });
+
+      const value = document.getElementById('favoriteActivity').value.trim();
+      if (!value) {
+        favoriteError.style.display = 'block';
+        favoriteActivity.closest('.form-group').classList.add('invalid');
+        return;
+      }
+      const li = document.createElement('li');
+      li.textContent = value;
+      if (favoriteList.children[0] && favoriteList.children[0].textContent === 'No favorites yet') {
+        favoriteList.innerHTML = '';
+      }
+      favoriteList.appendChild(li);
+      this.reset();
+      closeModal(modals.favorite);
+      showToast('Favorite activity added!');
+    });
+
+    function fetchActivityData() {
+      activityDataElement.innerHTML = `
+        <li><strong>Today's Steps:</strong> 4,230</li>
+        <li><strong>Activity Time:</strong> 45 minutes</li>
+        <li><strong>Activities:</strong> Walking, Stretching</li>
+        <li><strong>Weekly Goal:</strong> 3/7 days active</li>
+      `;
+
     }
 
     // Start the app
     window.onload = initApp;
   </script>
+
+  <script>
+  function updateReadingTime() {
+    const timeInput = document.getElementById('readingTime');
+    if (timeInput) {
+      const now = new Date();
+      const pad = n => n.toString().padStart(2, '0');
+      timeInput.value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+  }
+  document.getElementById('logReadingsBtn').addEventListener('click', () => {
+    document.getElementById('bloodSugarModal').style.display = 'flex';
+    
+    updateReadingTime();
+  });
+    document.getElementById('newReadingBtn').addEventListener('click', () => {
+    document.getElementById('bloodSugarModal').style.display = 'flex';
+    
+    updateReadingTime();
+  });
+</script>
+
 </body>
 </html>
