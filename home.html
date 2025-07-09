@@ -333,11 +333,21 @@
       <form id="bloodSugarForm">
         <div class="form-group">
           <label for="bloodSugarValue">Blood Sugar (mg/dL)</label>
-          <input type="number" id="bloodSugarValue" class="form-control" required>
+          <!-- Added placeholder value -->
+          <input type="number" id="bloodSugarValue" class="form-control" placeholder="eg: 50" step="10" required>
         </div>
         <div class="form-group">
           <label for="readingTime">Time</label>
-          <input type="time" id="readingTime" class="form-control" required>
+            <input type="time" id="readingTime" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="readingType">Reading Taken while:</label>
+            <select id="readingType" class="form-control" required>
+              <option value="" disabled selected>Select reading type</option>
+              <option value="fasting">Fasting</option>
+              <option value="afterEating">After Meal</option>
+              <option value="2-after2Hours">2-3 Hours After Meal</option>
+            </select>
         </div>
         <div class="form-group">
           <button type="submit" class="btn btn-primary">
@@ -358,7 +368,7 @@
       <form id="mealForm">
         <div class="form-group">
           <label for="carbsAmount">Carbohydrates (grams)</label>
-          <input type="number" id="carbsAmount" class="form-control" required>
+          <input type="number" id="carbsAmount" class="form-control" placeholder="eg: 1000" step="100" required>
         </div>
         <div class="form-group">
           <button type="submit" class="btn btn-primary">
@@ -389,6 +399,23 @@
       </form>
     </div>
   </div>
+  <!-- Footer for useful hotlines and links -->
+  <footer style="background-color: #f8f9fa; padding: 1rem; text-align: center; margin-top: 2rem; font-size: 0.9rem;">
+    <p><strong>Need Help?</strong> Contact any of the following hotlines or visit resources for more information.</p>
+
+    <ul style="list-style: none; padding: 0; margin: 0.5rem 0;">
+      <li><strong>DOH Healthline (PH):</strong> 1555 (Toll-free)</li>
+      <li><strong>National Diabetes Hotline (US):</strong> 1-800-DIABETES (1-800-342-2383)</li>
+    </ul>
+
+    <p>
+      Useful Links:
+      <a href="https://www.cdc.gov/diabetes/" target="_blank">CDC Diabetes Info</a> |
+      <a href="https://www.who.int/news-room/fact-sheets/detail/diabetes" target="_blank">WHO Diabetes Facts</a> |
+      <a href="https://www.idf.org/" target="_blank">International Diabetes Federation</a>
+    </p>
+  </footer>
+
 
   <script>
     const modals = {
@@ -407,6 +434,7 @@
 
     const favoriteList = document.getElementById('favoriteActivitiesList');
     const activityDataElement = document.getElementById('activityData');
+    
 
     function openModal(modal) {
       modal.style.display = 'flex';
@@ -436,7 +464,60 @@
 
     document.getElementById('bloodSugarForm').addEventListener('submit', e => {
       e.preventDefault();
-      const value = document.getElementById('bloodSugarValue').value;
+      // Get reading values
+      const value = parseInt(document.getElementById('bloodSugarValue').value);
+      const type = document.getElementById('readingType').value;
+
+      if (isNaN(value)) {
+        alert("Please enter a valid blood sugar value.");
+        return;
+      }
+
+      if (!type) {
+        alert("Please select a reading type.");
+        return;
+      }
+
+      let message = "";
+
+      // Validation based on a blood sugar chart
+      if (type === "fasting") {
+        if (value >= 80 && value <= 100) {
+          message = "Normal fasting blood sugar.";
+        } else if (value >= 101 && value <= 125) {
+          message = "Impaired fasting glucose (pre-diabetes).";
+        } else if (value >= 126) {
+          message = "Diabetic range for fasting glucose.";
+        } else {
+          message = "Low blood sugar. Consult a healthcare provider.";
+        }
+      }
+
+      else if (type === "afterEating") {
+        if (value >= 170 && value <= 200) {
+          message = "Normal blood sugar after eating.";
+        } else if (value >= 190 && value <= 230) {
+          message = "Impaired glucose tolerance (pre-diabetes).";
+        } else if (value >= 220) {
+          message = "Diabetic range after eating.";
+        } else {
+          message = "Below normal. Monitor for hypoglycemia.";
+        }
+      }
+
+      else if (type === "after2Hours") {
+        if (value >= 120 && value <= 140) {
+          message = "Normal blood sugar 2–3 hours after eating.";
+        } else if (value >= 140 && value <= 160) {
+          message = "Impaired glucose tolerance (pre-diabetes).";
+        } else if (value > 200) {
+          message = "Diabetic range after 2–3 hours.";
+        } else {
+          message = "Below normal or borderline. Consult a healthcare provider if unsure.";
+        }
+      }
+
+      alert(message);
       alert(`Blood sugar reading of ${value} mg/dL logged!`);
       closeModal(modals.bloodSugar);
       e.target.reset();
@@ -477,5 +558,28 @@
 
     window.onload = fetchActivityData;
   </script>
+
+ <!-- Script to automatically update time input to the current time -->
+  <script>
+  function updateReadingTime() {
+    const timeInput = document.getElementById('readingTime');
+    if (timeInput) {
+      const now = new Date();
+      const pad = n => n.toString().padStart(2, '0');
+      timeInput.value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+  }
+  document.getElementById('logReadingsBtn').addEventListener('click', () => {
+    document.getElementById('bloodSugarModal').style.display = 'flex';
+    
+    updateReadingTime();
+  });
+    document.getElementById('newReadingBtn').addEventListener('click', () => {
+    document.getElementById('bloodSugarModal').style.display = 'flex';
+    
+    updateReadingTime();
+  });
+</script>
+
 </body>
 </html>
