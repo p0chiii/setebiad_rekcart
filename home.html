@@ -16,6 +16,8 @@
       --bg: #f4f6f8;
       --card-bg: #fff;
       --shadow: 0 4px 10px rgba(0,0,0,0.05);
+      --toast-bg: #323232;
+      --toast-color: #fff;
     }
 
     * {
@@ -81,15 +83,28 @@
       border: none;
       font-family: inherit;
       font-size: 0.95rem;
+      outline: none;
     }
-
+    .btn:focus {
+      box-shadow: 0 0 0 2px var(--primary-light);
+    }
     .btn-primary {
       background-color: var(--primary);
       color: white;
     }
-
-    .btn-primary:hover {
-      background-color: #0056b3;
+    .btn-primary:disabled {
+      background-color: #b3d1f7;
+      cursor: not-allowed;
+    }
+    .btn-cancel {
+      background-color: #eee;
+      color: var(--text-light);
+      margin-left: 0.5rem;
+      border: 1px solid #ddd;
+    }
+    .btn-cancel:hover {
+      background-color: #f8d7da;
+      color: var(--danger);
     }
 
     .container {
@@ -216,6 +231,37 @@
       font-family: inherit;
     }
 
+    .form-group .error {
+      color: var(--danger);
+      font-size: 0.85rem;
+      margin-top: 0.2rem;
+      display: none;
+    }
+    .form-group.invalid .error {
+      display: block;
+    }
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--toast-bg);
+      color: var(--toast-color);
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      font-size: 1rem;
+    }
+    .toast.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
     @media (max-width: 768px) {
       .container {
         grid-template-columns: 1fr;
@@ -244,7 +290,6 @@
   </section>
 
   <main class="container">
-    <!-- Blood Sugar Card -->
     <div class="card">
       <div class="card-header">
         <h2><i class="fas fa-tint"></i> Blood Sugar</h2>
@@ -262,7 +307,6 @@
       </div>
     </div>
 
-    <!-- Medication Card -->
     <div class="card">
       <div class="card-header">
         <h2><i class="fas fa-pills"></i> Medications</h2>
@@ -274,7 +318,6 @@
       </ul>
     </div>
 
-    <!-- Food Card -->
     <div class="card">
       <div class="card-header">
         <h2><i class="fas fa-utensils"></i> Food</h2>
@@ -291,7 +334,6 @@
       </div>
     </div>
 
-    <!-- Activity Card -->
     <div class="card">
       <div class="card-header">
         <h2><i class="fas fa-running"></i> Activity</h2>
@@ -307,7 +349,6 @@
       </div>
     </div>
 
-    <!-- Favorite Activities Card -->
     <div class="card">
       <div class="card-header">
         <h2><i class="fas fa-star"></i> Favorite Activities</h2>
@@ -323,18 +364,19 @@
     </div>
   </main>
 
-  <!-- Blood Sugar Modal -->
-  <div class="modal" id="bloodSugarModal">
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <div class="modal" id="bloodSugarModal" tabindex="-1" aria-modal="true" aria-labelledby="bloodSugarLabel">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Log Blood Sugar</h3>
-        <button class="modal-close">&times;</button>
+        <h3 id="bloodSugarLabel">Log Blood Sugar</h3>
+        <button class="modal-close" title="Close (Esc)">&times;</button>
       </div>
-      <form id="bloodSugarForm">
+      <form id="bloodSugarForm" autocomplete="off">
         <div class="form-group">
           <label for="bloodSugarValue">Blood Sugar (mg/dL)</label>
-          <!-- Added placeholder value -->
-          <input type="number" id="bloodSugarValue" class="form-control" placeholder="eg: 50" step="10" required>
+          <input type="number" id="bloodSugarValue" class="form-control" placeholder="eg: 50" step="10" required aria-describedby="bloodSugarHelp">
+          <div class="error" id="bloodSugarError">Please enter a valid value (30-600).</div>
         </div>
         <div class="form-group">
           <label for="readingTime">Time</label>
@@ -346,60 +388,64 @@
               <option value="" disabled selected>Select reading type</option>
               <option value="fasting">Fasting</option>
               <option value="afterEating">After Meal</option>
-              <option value="2-after2Hours">2-3 Hours After Meal</option>
+              <option value="after2Hours">2-3 Hours After Meal</option>
             </select>
+          <div class="error" id="readingTypeError">Please select a reading type.</div>
         </div>
-        <div class="form-group">
+        <div class="form-group" style="display:flex;justify-content:flex-end;gap:0.5rem;">
           <button type="submit" class="btn btn-primary">
             <i class="fas fa-save"></i> Save
           </button>
+          <button type="button" class="btn btn-cancel" id="cancelBloodSugar">Cancel</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Meal Modal -->
-  <div class="modal" id="mealModal">
+  <div class="modal" id="mealModal" tabindex="-1" aria-modal="true" aria-labelledby="mealLabel">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Log Meal</h3>
-        <button class="modal-close">&times;</button>
+        <h3 id="mealLabel">Log Meal</h3>
+        <button class="modal-close" title="Close (Esc)">&times;</button>
       </div>
-      <form id="mealForm">
+      <form id="mealForm" autocomplete="off">
         <div class="form-group">
           <label for="carbsAmount">Carbohydrates (grams)</label>
-          <input type="number" id="carbsAmount" class="form-control" placeholder="eg: 1000" step="100" required>
+          <input type="number" id="carbsAmount" class="form-control" placeholder="eg: 100" step="1" min="0" max="1000" required aria-describedby="carbsHelp">
+          <div class="error" id="carbsError">Please enter a value between 0 and 1000.</div>
         </div>
-        <div class="form-group">
+        <div class="form-group" style="display:flex;justify-content:flex-end;gap:0.5rem;">
           <button type="submit" class="btn btn-primary">
             <i class="fas fa-save"></i> Save
           </button>
+          <button type="button" class="btn btn-cancel" id="cancelMeal">Cancel</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Favorite Modal -->
-  <div class="modal" id="favoriteModal">
+  <div class="modal" id="favoriteModal" tabindex="-1" aria-modal="true" aria-labelledby="favoriteLabel">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Add Favorite Activity</h3>
-        <button class="modal-close">&times;</button>
+        <h3 id="favoriteLabel">Add Favorite Activity</h3>
+        <button class="modal-close" title="Close (Esc)">&times;</button>
       </div>
-      <form id="favoriteForm">
+      <form id="favoriteForm" autocomplete="off">
         <div class="form-group">
           <label for="favoriteActivity">Activity Name</label>
-          <input type="text" id="favoriteActivity" class="form-control" required>
+          <input type="text" id="favoriteActivity" class="form-control" required aria-describedby="favoriteHelp">
+          <div class="error" id="favoriteError">Please enter an activity name.</div>
         </div>
-        <div class="form-group">
+        <div class="form-group" style="display:flex;justify-content:flex-end;gap:0.5rem;">
           <button type="submit" class="btn btn-primary">
             <i class="fas fa-save"></i> Save
           </button>
+          <button type="button" class="btn btn-cancel" id="cancelFavorite">Cancel</button>
         </div>
       </form>
     </div>
   </div>
-  <!-- Footer for useful hotlines and links -->
+
   <footer style="background-color: #f8f9fa; padding: 1rem; text-align: center; margin-top: 2rem; font-size: 0.9rem;">
     <p><strong>Need Help?</strong> Contact any of the following hotlines or visit resources for more information.</p>
 
@@ -435,25 +481,57 @@
     const favoriteList = document.getElementById('favoriteActivitiesList');
     const activityDataElement = document.getElementById('activityData');
     
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
 
     function openModal(modal) {
       modal.style.display = 'flex';
+      modal.setAttribute('aria-hidden', 'false');
+  
+      const firstInput = modal.querySelector('input,select,button');
+      if (firstInput) firstInput.focus();
     }
-
     function closeModal(modal) {
       modal.style.display = 'none';
+      modal.setAttribute('aria-hidden', 'true');
     }
-
     document.querySelectorAll('.modal-close').forEach(btn => {
       btn.addEventListener('click', () => {
         closeModal(btn.closest('.modal'));
       });
     });
 
-    window.addEventListener('click', (e) => {
-      if (e.target.classList.contains('modal')) {
-        closeModal(e.target);
+    document.getElementById('cancelBloodSugar').onclick = () => closeModal(document.getElementById('bloodSugarModal'));
+    document.getElementById('cancelMeal').onclick = () => closeModal(document.getElementById('mealModal'));
+    document.getElementById('cancelFavorite').onclick = () => closeModal(document.getElementById('favoriteModal'));
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal').forEach(m => {
+          if (m.style.display === 'flex') closeModal(m);
+        });
       }
+    });
+
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+          const focusable = modal.querySelectorAll('input,select,button');
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
+      });
     });
 
     buttons.logReadings.addEventListener('click', () => openModal(modals.bloodSugar));
@@ -462,25 +540,69 @@
     buttons.addFavorite.addEventListener('click', () => openModal(modals.favorite));
     buttons.connectFit.addEventListener('click', fetchActivityData);
 
+    const bloodSugarValue = document.getElementById('bloodSugarValue');
+    const bloodSugarError = document.getElementById('bloodSugarError');
+    const readingType = document.getElementById('readingType');
+    const readingTypeError = document.getElementById('readingTypeError');
+    bloodSugarValue.addEventListener('input', function() {
+      if (this.value < 30 || this.value > 600) {
+        bloodSugarError.style.display = 'block';
+        this.closest('.form-group').classList.add('invalid');
+      } else {
+        bloodSugarError.style.display = 'none';
+        this.closest('.form-group').classList.remove('invalid');
+      }
+    });
+    readingType.addEventListener('change', function() {
+      if (!this.value) {
+        readingTypeError.style.display = 'block';
+        this.closest('.form-group').classList.add('invalid');
+      } else {
+        readingTypeError.style.display = 'none';
+        this.closest('.form-group').classList.remove('invalid');
+      }
+    });
+
+    const carbsAmount = document.getElementById('carbsAmount');
+    const carbsError = document.getElementById('carbsError');
+    carbsAmount.addEventListener('input', function() {
+      if (this.value < 0 || this.value > 1000) {
+        carbsError.style.display = 'block';
+        this.closest('.form-group').classList.add('invalid');
+      } else {
+        carbsError.style.display = 'none';
+        this.closest('.form-group').classList.remove('invalid');
+      }
+    });
+
+    const favoriteActivity = document.getElementById('favoriteActivity');
+    const favoriteError = document.getElementById('favoriteError');
+    favoriteActivity.addEventListener('input', function() {
+      if (!this.value.trim()) {
+        favoriteError.style.display = 'block';
+        this.closest('.form-group').classList.add('invalid');
+      } else {
+        favoriteError.style.display = 'none';
+        this.closest('.form-group').classList.remove('invalid');
+      }
+    });
+
     document.getElementById('bloodSugarForm').addEventListener('submit', e => {
       e.preventDefault();
-      // Get reading values
+
       const value = parseInt(document.getElementById('bloodSugarValue').value);
       const type = document.getElementById('readingType').value;
-
-      if (isNaN(value)) {
-        alert("Please enter a valid blood sugar value.");
+      if (isNaN(value) || value < 30 || value > 600) {
+        bloodSugarError.style.display = 'block';
+        bloodSugarValue.closest('.form-group').classList.add('invalid');
         return;
       }
-
       if (!type) {
-        alert("Please select a reading type.");
+        readingTypeError.style.display = 'block';
+        readingType.closest('.form-group').classList.add('invalid');
         return;
       }
-
       let message = "";
-
-      // Validation based on a blood sugar chart
       if (type === "fasting") {
         if (value >= 80 && value <= 100) {
           message = "Normal fasting blood sugar.";
@@ -492,7 +614,6 @@
           message = "Low blood sugar. Consult a healthcare provider.";
         }
       }
-
       else if (type === "afterEating") {
         if (value >= 170 && value <= 200) {
           message = "Normal blood sugar after eating.";
@@ -504,7 +625,6 @@
           message = "Below normal. Monitor for hypoglycemia.";
         }
       }
-
       else if (type === "after2Hours") {
         if (value >= 120 && value <= 140) {
           message = "Normal blood sugar 2–3 hours after eating.";
@@ -516,9 +636,8 @@
           message = "Below normal or borderline. Consult a healthcare provider if unsure.";
         }
       }
-
-      alert(message);
-      alert(`Blood sugar reading of ${value} mg/dL logged!`);
+      showToast(message);
+      showToast(`Blood sugar reading of ${value} mg/dL logged!`);
       closeModal(modals.bloodSugar);
       e.target.reset();
     });
@@ -526,7 +645,12 @@
     document.getElementById('mealForm').addEventListener('submit', e => {
       e.preventDefault();
       const carbs = document.getElementById('carbsAmount').value;
-      alert(`Meal with ${carbs}g carbs logged!`);
+      if (carbs < 0 || carbs > 1000) {
+        carbsError.style.display = 'block';
+        carbsAmount.closest('.form-group').classList.add('invalid');
+        return;
+      }
+      showToast(`Meal with ${carbs}g carbs logged!`);
       closeModal(modals.meal);
       e.target.reset();
     });
@@ -534,19 +658,22 @@
     document.getElementById('favoriteForm').addEventListener('submit', function (e) {
       e.preventDefault();
       const value = document.getElementById('favoriteActivity').value.trim();
-      if (value) {
-        const li = document.createElement('li');
-        li.textContent = value;
-        if (favoriteList.children[0] && favoriteList.children[0].textContent === 'No favorites yet') {
-          favoriteList.innerHTML = '';
-        }
-        favoriteList.appendChild(li);
-        this.reset();
-        closeModal(modals.favorite);
+      if (!value) {
+        favoriteError.style.display = 'block';
+        favoriteActivity.closest('.form-group').classList.add('invalid');
+        return;
       }
+      const li = document.createElement('li');
+      li.textContent = value;
+      if (favoriteList.children[0] && favoriteList.children[0].textContent === 'No favorites yet') {
+        favoriteList.innerHTML = '';
+      }
+      favoriteList.appendChild(li);
+      this.reset();
+      closeModal(modals.favorite);
+      showToast('Favorite activity added!');
     });
 
-    // Simulate Google Fit API for now
     function fetchActivityData() {
       activityDataElement.innerHTML = `
         <li><strong>Today's Steps:</strong> 4,230</li>
@@ -559,7 +686,6 @@
     window.onload = fetchActivityData;
   </script>
 
- <!-- Script to automatically update time input to the current time -->
   <script>
   function updateReadingTime() {
     const timeInput = document.getElementById('readingTime');
